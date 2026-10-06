@@ -163,25 +163,32 @@ class BioprocessMonitor:
     def export_summary(self, filepath):
         """
         Generates a batch summary table and exports it to a CSV file.
-
-        Parameters
-        ----------
-        filepath : str
-            Output CSV table path.
-
-        Summary Table Columns
-        ---------------------
-        batch_id
-            Batch identifier.
-
-        ph_optimal_percent
-            Percentage of measurements in a batch within the
-            acceptable pH range, rounded to 2 decimal places.
-
-        temperature_optimal_percent
-            Percentage of measurements in a batch within the
-            acceptable temperature range, rounded to 2 decimal places.
-
-        C_product_g_L^-1_final
-            Final product concentration for the batch.
         """
+        summary_data = []
+
+        batch_ids = sorted(self.df.loc[:, "batch_id"].unique())
+
+        for batch_id in batch_ids:
+            df_batch = self.extract_batch(batch_id)
+
+            #% of pH in optimal range
+            mask_ph_optimal = self.optimal_ph_mask(df_batch)
+            percent_ph_optimal = (mask_ph_optimal.sum() / len(mask_ph_optimal)) * 100
+
+            #% of temperature in optimal range
+            mask_temp_optimal = self.optimal_temperature_mask(df_batch)
+            percent_temp_optimal = (mask_temp_optimal.sum() / len(mask_temp_optimal)) * 100
+
+            idx_final = df_batch.loc[:, "time_h"].idmax()
+
+            c_product_final = df_batch.loc[idx_final, "C_product_g_L_^-1"]
+
+            summary_data.append({
+                "batch_id": batch_id,
+                "ph_optimal_percent": round(percent_ph_optimal, 2),
+                "temperature_optimal_percent": round(percent_temp_optimal, 2),
+                "C_product_optimal": round(c_product_final, 2),
+            })
+
+            df_summary = pd.DataFrame(summary_data)
+            df_summary.to_csv(filepath, index = False)
