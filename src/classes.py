@@ -1,4 +1,4 @@
-import os
+
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import MultipleLocator
@@ -18,7 +18,8 @@ class BioprocessMonitor:
         """
         Extracts data corresponding to a single batch.
         """
-        return self.df.loc[:,batch_id] == batch_id
+        mask = self.df.loc[:, "batch_id"] == batch_id
+        return self.df.loc[mask, :].copy()
 
 
 
@@ -30,8 +31,9 @@ class BioprocessMonitor:
 
         lower_bound = self.ph_lims[0]
         upper_bound = self.ph_lims[1]
-        mask_pH = df_batch['pH'] >= lower_bound * df_batch['pH'] <= upper_bound
-        return mask_pH
+        mask_1 = df_batch.loc[:, 'pH'] >= lower_bound
+        mask_2  = df_batch.loc[:, 'pH'] <= upper_bound
+        return mask_1 & mask_2
 
     def optimal_temperature_mask(self, df_batch):
         """
@@ -41,8 +43,9 @@ class BioprocessMonitor:
 
         lower_bound = self.temperature_lims[0]
         upper_bound = self.temperature_lims[1]
-        mask_T = df_batch['temperature'] >= lower_bound * df_batch['temperature'] <= upper_bound
-        return mask_T
+        mask_T1 = df_batch.loc[:, 'temperature_C'] >= lower_bound
+        mask_T2 = df_batch.loc[:, 'temperature_C'] <= upper_bound
+        return mask_T1 & mask_T2
 
 
     def get_n_batches(self):
@@ -63,90 +66,87 @@ class BioprocessMonitor:
         # =======================================================================================
         #Top-Left Concentrations
         # =======================================================================================
-        ax = [0,0]
+
         #Glucose
-        ax.scatter(
-        df_batch.loc[:, "time_h"], df_batch.loc[:, "C_glucose_g_L_^-1"],
+        axes[0,0].scatter(
+        df_batch.loc[:, "time_h"], df_batch.loc[:, "C_glucose_g_L^-1"],
         label = "Glucose", color = "tab:blue", marker = "o",
         s = 32, alpha = 0.7, edgecolor = "black", linewidth = 1
         )
         #Biomass
-        ax.scatter(
-        df_batch.loc[:, "time_h"], df_batch.loc[:, "C_biomass_g_L_^-1"],
+        axes[0,0].scatter(
+        df_batch.loc[:, "time_h"], df_batch.loc[:, "C_biomass_g_L^-1"],
         label = "Biomass", color = "tab:orange", marker = "^",
         s = 32, alpha = 0.7, edgecolor = "black", linewidth = 1
         )
         #Product
-        ax.scatter(
-        df_batch.loc[:, "time_h"], df_batch.loc[:, "C_product_g_L_^-1"],
+        axes[0,0].scatter(
+        df_batch.loc[:, "time_h"], df_batch.loc[:, "C_product_g_L^-1"],
         label = "Product", color = "tab:green", marker = "s",
         s = 32, alpha = 0.7, edgecolor = "black", linewidth = 1
         )
-        ax.set_xlabel("Time [h]", fontsize = 10)
-        ax.set_ylabel("Concentration [g/L]", fontsize = 10)
-        ax.legend(fontsize = 10)
+        axes[0,0].set_xlabel("Time [h]", fontsize = 10)
+        axes[0,0].set_ylabel("Concentration [g/L]", fontsize = 10)
+        axes[0,0].legend(fontsize = 10)
 
         # =======================================================================================
         #Top-Right Temperatures
         #========================================================================================
-        ax = axes[0,1]
+
         mask_temp_optimal = self.optimal_temperature_mask(df_batch)
         mask_temp_suboptimal = ~mask_temp_optimal
 
         #Optimal values
-        ax.scatter(
+        axes[0,1].scatter(
         df_batch.loc[mask_temp_optimal, "time_h"], df_batch.loc[mask_temp_optimal, "temperature_C"],
         label = "Optimal", color = "tab:green", marker = "o",
         s = 32, alpha = 0.7, edgecolor = "black", linewidth = 1
         )
 
         #Sub-Optimal values
-        ax.scatter(
+        axes[0,1].scatter(
         df_batch.loc[mask_temp_suboptimal, "time_h"], df_batch.loc[mask_temp_suboptimal, "temperature_C"],
         label = "Sub-Optimal", color = "tab:red", marker = "X",
         s = 32, alpha = 0.7, edgecolor = "black", linewidth = 1
         )
-        ax.set_xlabel("Time [h]", fontsize = 10)
-        ax.set_ylabel("Temperature [°C]", fontsize = 10)
-        ax.legend(fontsize = 10)
+        axes[0,1].set_xlabel("Time [h]", fontsize = 10)
+        axes[0,1].set_ylabel("Temperature [°C]", fontsize = 10)
+        axes[0,1].legend(fontsize = 10)
 
         # =======================================================================================
         #Bottom-Left pH
         #========================================================================================
-        ax = axes[1, 0]
         mask_ph_optimal = self.optimal_ph_mask(df_batch)
         mask_ph_suboptimal = ~mask_ph_optimal
 
         # Optimal values
-        ax.scatter(
-            df_batch.loc[mask_ph_optimal, "time_h"], df_batch.loc[mask_ph_optimal, "temperature_C"],
+        axes[1, 0].scatter(
+            df_batch.loc[mask_ph_optimal, "time_h"], df_batch.loc[mask_ph_optimal, "pH"],
             label="Optimal", color="tab:green", marker="o",
             s=32, alpha=0.7, edgecolor="black", linewidth=1
         )
 
         # Sub-Optimal values
-        ax.scatter(
-            df_batch.loc[mask_ph_suboptimal, "time_h"], df_batch.loc[mask_ph_suboptimal, "temperature_C"],
+        axes[1, 0].scatter(
+            df_batch.loc[mask_ph_suboptimal, "time_h"], df_batch.loc[mask_ph_suboptimal, "pH"],
             label="Sub-Optimal", color="tab:red", marker="X",
             s=32, alpha=0.7, edgecolor="black", linewidth=1
         )
-        ax.set_xlabel("Time [h]", fontsize=10)
-        ax.set_ylabel("pH", fontsize=10)
-        ax.legend(fontsize=10)
+        axes[1, 0].set_xlabel("Time [h]", fontsize=10)
+        axes[1, 0].set_ylabel("pH", fontsize=10)
+        axes[1, 0].legend(fontsize=10)
 
         # =======================================================================================
         # Bottom-Right Dissolved Oxygen
         # ========================================================================================
-        ax = axes[1, 1]
-
-        ax.scatter(
+        axes[1, 1].scatter(
             df_batch.loc[:, "time_h"], df_batch.loc[:, "DO_percent"],
             label="DO %", color="tab:blue", marker="o",
             s=32, alpha=0.7, edgecolor="black", linewidth=1
         )
-        ax.set_xlabel("Time [h]", fontsize=10)
-        ax.set_ylabel("Dissolved Oxygen (%)", fontsize=10)
-        ax.legend(fontsize=10)
+        axes[1, 1].set_xlabel("Time [h]", fontsize=10)
+        axes[1, 1].set_ylabel("Dissolved Oxygen [%]", fontsize=10)
+        axes[1, 1].legend(fontsize=10)
 
         # =======================================================================================
         # Format
@@ -179,16 +179,16 @@ class BioprocessMonitor:
             mask_temp_optimal = self.optimal_temperature_mask(df_batch)
             percent_temp_optimal = (mask_temp_optimal.sum() / len(mask_temp_optimal)) * 100
 
-            idx_final = df_batch.loc[:, "time_h"].idmax()
+            idx_final = df_batch.loc[:, "time_h"].idxmax()
 
-            c_product_final = df_batch.loc[idx_final, "C_product_g_L_^-1"]
+            c_product_final = df_batch.loc[idx_final, "C_product_g_L^-1"]
 
             summary_data.append({
                 "batch_id": batch_id,
                 "ph_optimal_percent": round(percent_ph_optimal, 2),
                 "temperature_optimal_percent": round(percent_temp_optimal, 2),
-                "C_product_optimal": round(c_product_final, 2),
+                "C_product_g_L^-1": round(c_product_final, 2),
             })
 
-            df_summary = pd.DataFrame(summary_data)
-            df_summary.to_csv(filepath, index = False)
+        df_summary = pd.DataFrame(summary_data)
+        df_summary.to_csv(filepath, index = False)
